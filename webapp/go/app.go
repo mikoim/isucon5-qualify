@@ -397,11 +397,21 @@ LIMIT 10
 	}
 	rows.Close()
 
-	rows, err = db.Query(`SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC`, user.ID, user.ID)
+	friendsCountQuery := `
+SELECT COUNT(*)
+FROM
+relations
+WHERE
+one = ?
+`
+
+	//rows, err = db.Query(`SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC`, user.ID, user.ID)
+	rows, err = db.Query(friendsCountQuery, user.ID)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
-	friendsMap := make(map[int]time.Time)
+	//friendsMap := make(map[int]time.Time)
+	/*
 	for rows.Next() {
 		var id, one, another int
 		var createdAt time.Time
@@ -416,11 +426,16 @@ LIMIT 10
 			friendsMap[friendID] = createdAt
 		}
 	}
+	*/
+	/*
 	friends := make([]Friend, 0, len(friendsMap))
 	for key, val := range friendsMap {
 		friends = append(friends, Friend{key, val})
 	}
-	rows.Close()
+	*/
+	friends := new(int)
+	checkErr(row.Scan(friends))
+	rows.Close();
 
 	rows, err = db.Query(`SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) AS updated
 FROM footprints
@@ -446,10 +461,10 @@ LIMIT 10`, user.ID)
 		CommentsForMe     []Comment
 		EntriesOfFriends  []Entry
 		CommentsOfFriends []Comment
-		Friends           []Friend
+		FriendCount       int
 		Footprints        []Footprint
 	}{
-		*user, prof, entries, commentsForMe, entriesOfFriends, commentsOfFriends, friends, footprints,
+		*user, prof, entries, commentsForMe, entriesOfFriends, commentsOfFriends, *friends, footprints,
 	})
 }
 
