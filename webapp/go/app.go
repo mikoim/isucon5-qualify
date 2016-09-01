@@ -16,6 +16,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -842,7 +845,21 @@ func main() {
 	r.HandleFunc("/initialize", myHandler(GetInitialize))
 	r.HandleFunc("/", myHandler(GetIndex))
 	//r.PathPrefix("/").Handler(http.FileServer(http.Dir("../static")))
-	log.Fatal(http.ListenAndServe(":8080", r))
+
+	s, err := net.Listen("unix", "app.sock")
+	if err != nil {
+		panic(err)
+	}
+
+	defer s.Close()
+
+	go func() {
+		log.Fatal(http.Serve(s, r))
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
+	log.Println(<-c)
 }
 
 func checkErr(err error) {
