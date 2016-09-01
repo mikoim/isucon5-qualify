@@ -78,13 +78,14 @@ var prefs = []string{"未入力",
 	"岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"}
 
 var (
-	ErrAuthentication   = errors.New("Authentication error.")
+	ErrAuthentication = errors.New("Authentication error.")
 	ErrPermissionDenied = errors.New("Permission denied.")
-	ErrContentNotFound  = errors.New("Content not found.")
+	ErrContentNotFound = errors.New("Content not found.")
 )
 
 func authenticate(w http.ResponseWriter, r *http.Request, email, passwd string) {
-	query := `SELECT u.id AS id, u.account_name AS account_name, u.nick_name AS nick_name, u.email AS email
+	query := `
+SELECT u.id AS id, u.account_name AS account_name, u.nick_name AS nick_name, u.email AS email
 FROM users u
 JOIN salts s ON u.id = s.user_id
 WHERE u.email = ? AND u.passhash = SHA2(CONCAT(?, s.salt), 512)`
@@ -321,7 +322,8 @@ func GetIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
-	rows, err = db.Query(`SELECT c.id AS id, c.entry_id AS entry_id, c.user_id AS user_id, c.comment AS comment, c.created_at AS created_at
+	rows, err = db.Query(`
+SELECT c.id AS id, c.entry_id AS entry_id, c.user_id AS user_id, c.comment AS comment, c.created_at AS created_at
 FROM comments c
 JOIN entries e ON c.entry_id = e.id
 WHERE e.user_id = ?
@@ -404,36 +406,11 @@ relations
 WHERE
 one = ?
 `
-
-	//rows, err = db.Query(`SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC`, user.ID, user.ID)
 	friends := new(int)
 	err = db.QueryRow(friendsCountQuery, user.ID).Scan(friends)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
-	//friendsMap := make(map[int]time.Time)
-	/*
-	for rows.Next() {
-		var id, one, another int
-		var createdAt time.Time
-		checkErr(rows.Scan(&id, &one, &another, &createdAt))
-		var friendID int
-		if one == user.ID {
-			friendID = another
-		} else {
-			friendID = one
-		}
-		if _, ok := friendsMap[friendID]; !ok {
-			friendsMap[friendID] = createdAt
-		}
-	}
-	*/
-	/*
-	friends := make([]Friend, 0, len(friendsMap))
-	for key, val := range friendsMap {
-		friends = append(friends, Friend{key, val})
-	}
-	*/
 
 	rows, err = db.Query(`SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) AS updated
 FROM footprints
@@ -532,7 +509,7 @@ WHERE user_id = ?`
 	_, err := db.Exec(query, firstName, lastName, sex, birth, pref, user.ID)
 	checkErr(err)
 	// TODO should escape the account name?
-	http.Redirect(w, r, "/profile/"+account, http.StatusSeeOther)
+	http.Redirect(w, r, "/profile/" + account, http.StatusSeeOther)
 }
 
 func ListEntries(w http.ResponseWriter, r *http.Request) {
@@ -631,9 +608,9 @@ func PostEntry(w http.ResponseWriter, r *http.Request) {
 	} else {
 		private = 1
 	}
-	_, err := db.Exec(`INSERT INTO entries (user_id, private, body) VALUES (?,?,?)`, user.ID, private, title+"\n"+content)
+	_, err := db.Exec(`INSERT INTO entries (user_id, private, body) VALUES (?,?,?)`, user.ID, private, title + "\n" + content)
 	checkErr(err)
-	http.Redirect(w, r, "/diary/entries/"+user.AccountName, http.StatusSeeOther)
+	http.Redirect(w, r, "/diary/entries/" + user.AccountName, http.StatusSeeOther)
 }
 
 func PostComment(w http.ResponseWriter, r *http.Request) {
@@ -663,7 +640,7 @@ func PostComment(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.Exec(`INSERT INTO comments (entry_id, user_id, comment) VALUES (?,?,?)`, entry.ID, user.ID, r.FormValue("comment"))
 	checkErr(err)
-	http.Redirect(w, r, "/diary/entry/"+strconv.Itoa(entry.ID), http.StatusSeeOther)
+	http.Redirect(w, r, "/diary/entry/" + strconv.Itoa(entry.ID), http.StatusSeeOther)
 }
 
 func GetFootprints(w http.ResponseWriter, r *http.Request) {
@@ -673,7 +650,8 @@ func GetFootprints(w http.ResponseWriter, r *http.Request) {
 
 	user := getCurrentUser(w, r)
 	footprints := make([]Footprint, 0, 50)
-	rows, err := db.Query(`SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) as updated
+	rows, err := db.Query(`
+SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) as updated
 FROM footprints
 WHERE user_id = ?
 GROUP BY user_id, owner_id, DATE(created_at)
@@ -772,7 +750,7 @@ func main() {
 		ssecret = "beermoris"
 	}
 
-	db, err = sql.Open("mysql", user+":"+password+"@tcp("+host+":"+strconv.Itoa(port)+")/"+dbname+"?loc=Local&parseTime=true")
+	db, err = sql.Open("mysql", user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + dbname + "?loc=Local&parseTime=true")
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %s.", err.Error())
 	}
@@ -805,7 +783,6 @@ func main() {
 
 	r.HandleFunc("/initialize", myHandler(GetInitialize))
 	r.HandleFunc("/", myHandler(GetIndex))
-	//r.PathPrefix("/").Handler(http.FileServer(http.Dir("../static")))
 
 	s, err := net.Listen("unix", "app.sock")
 	if err != nil {
