@@ -335,7 +335,23 @@ LIMIT 10`, user.ID)
 	}
 	rows.Close()
 
-	rows, err = db.Query(`SELECT * FROM entries ORDER BY created_at DESC LIMIT 1000`)
+	entriesOfFriendsQuery := `
+SELECT
+entries.id,
+entries.user_id,
+entries.private,
+entries.body,
+entries.created_at
+FROM
+entries
+LEFT JOIN
+relations ON entries.user_id = relations.one
+WHERE
+relations.another = ?
+ORDER BY entries.created_at DESC
+LIMIT 10
+`
+	rows, err = db.Query(entriesOfFriendsQuery, user.ID)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
@@ -345,42 +361,88 @@ LIMIT 10`, user.ID)
 		var body string
 		var createdAt time.Time
 		checkErr(rows.Scan(&id, &userID, &private, &body, &createdAt))
-		if !isFriend(w, r, userID) {
-			continue
-		}
 		entriesOfFriends = append(entriesOfFriends, Entry{id, userID, private == 1, strings.SplitN(body, "\n", 2)[0], strings.SplitN(body, "\n", 2)[1], createdAt})
-		if len(entriesOfFriends) >= 10 {
-			break
-		}
 	}
 	rows.Close()
 
-	rows, err = db.Query(`SELECT * FROM comments ORDER BY created_at DESC LIMIT 1000`)
+	/*	commentsOfFriendsQuery := `
+		SELECT
+		comments.id,
+		comments.user_id,
+		comments.private,
+		comments.comment,
+		comments.created_at
+		FROM
+		comments
+		LEFT JOIN
+		relations ON comments.user_id = relations.one
+		LEFT JOIN
+		entries ON comments.entry_id = entries.id
+		WHERE
+		relations.another = ?
+		ORDER BY entries.created_at DESC
+		LIMIT 10
+		`*/
+	commentsOfFriendsQuery := `
+SELECT
+comments.id,
+comments.entry_id,
+comments.user_id,
+comments.comment,
+comments.created_at
+FROM
+comments
+LEFT JOIN
+relations ON comments.user_id = relations.one
+WHERE
+relations.another = ?
+ORDER BY comments.created_at DESC
+LIMIT 10
+`
+	rows, err = db.Query(commentsOfFriendsQuery, user.ID)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
+
+	/*
+		commentsOfFriends := make([]Comment, 0, 10)
+		for rows.Next() {
+			c := Comment{}
+			checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt))
+			if !isFriend(w, r, c.UserID) {
+				continue
+			}
+			entry_row := db.QueryRow(`SELECT * FROM entries WHERE id = ?`, c.EntryID)
+			var id, userID, private int
+			var body string
+			var createdAt time.Time
+			checkErr(entry_row.Scan(&id, &userID, &private, &body, &createdAt))
+			entry := Entry{id, userID, private == 1, strings.SplitN(body, "\n", 2)[0], strings.SplitN(body, "\n", 2)[1], createdAt}
+			if entry.Private {
+				if !permitted(w, r, entry.UserID) {
+					continue
+				}
+			}
+			commentsOfFriends = append(commentsOfFriends, c)
+			if len(commentsOfFriends) >= 10 {
+				break
+			}
+		}
+	*/
+
 	commentsOfFriends := make([]Comment, 0, 10)
 	for rows.Next() {
 		c := Comment{}
-		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt))
-		if !isFriend(w, r, c.UserID) {
-			continue
-		}
-		row := db.QueryRow(`SELECT * FROM entries WHERE id = ?`, c.EntryID)
-		var id, userID, private int
-		var body string
-		var createdAt time.Time
-		checkErr(row.Scan(&id, &userID, &private, &body, &createdAt))
-		entry := Entry{id, userID, private == 1, strings.SplitN(body, "\n", 2)[0], strings.SplitN(body, "\n", 2)[1], createdAt}
-		if entry.Private {
-			if !permitted(w, r, entry.UserID) {
-				continue
+		//var entryUserId, private int
+		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt)) //, &entryUserId, &private))
+		/*
+			if private == 1 {
+				if !permitted(w, r, entryUserId) {
+					continue
+				}
 			}
-		}
+		*/
 		commentsOfFriends = append(commentsOfFriends, c)
-		if len(commentsOfFriends) >= 10 {
-			break
-		}
 	}
 	rows.Close()
 
@@ -779,7 +841,7 @@ func main() {
 
 	r.HandleFunc("/initialize", myHandler(GetInitialize))
 	r.HandleFunc("/", myHandler(GetIndex))
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("../static")))
+	//r.PathPrefix("/").Handler(http.FileServer(http.Dir("../static")))
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
