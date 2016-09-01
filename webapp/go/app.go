@@ -365,24 +365,6 @@ LIMIT 10
 	}
 	rows.Close()
 
-	/*	commentsOfFriendsQuery := `
-		SELECT
-		comments.id,
-		comments.user_id,
-		comments.private,
-		comments.comment,
-		comments.created_at
-		FROM
-		comments
-		LEFT JOIN
-		relations ON comments.user_id = relations.one
-		LEFT JOIN
-		entries ON comments.entry_id = entries.id
-		WHERE
-		relations.another = ?
-		ORDER BY entries.created_at DESC
-		LIMIT 10
-		`*/
 	commentsOfFriendsQuery := `
 SELECT
 comments.id,
@@ -404,44 +386,10 @@ LIMIT 10
 		checkErr(err)
 	}
 
-	/*
-		commentsOfFriends := make([]Comment, 0, 10)
-		for rows.Next() {
-			c := Comment{}
-			checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt))
-			if !isFriend(w, r, c.UserID) {
-				continue
-			}
-			entry_row := db.QueryRow(`SELECT * FROM entries WHERE id = ?`, c.EntryID)
-			var id, userID, private int
-			var body string
-			var createdAt time.Time
-			checkErr(entry_row.Scan(&id, &userID, &private, &body, &createdAt))
-			entry := Entry{id, userID, private == 1, strings.SplitN(body, "\n", 2)[0], strings.SplitN(body, "\n", 2)[1], createdAt}
-			if entry.Private {
-				if !permitted(w, r, entry.UserID) {
-					continue
-				}
-			}
-			commentsOfFriends = append(commentsOfFriends, c)
-			if len(commentsOfFriends) >= 10 {
-				break
-			}
-		}
-	*/
-
 	commentsOfFriends := make([]Comment, 0, 10)
 	for rows.Next() {
 		c := Comment{}
-		//var entryUserId, private int
-		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt)) //, &entryUserId, &private))
-		/*
-			if private == 1 {
-				if !permitted(w, r, entryUserId) {
-					continue
-				}
-			}
-		*/
+		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt))
 		commentsOfFriends = append(commentsOfFriends, c)
 	}
 	rows.Close()
