@@ -406,7 +406,8 @@ one = ?
 `
 
 	//rows, err = db.Query(`SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC`, user.ID, user.ID)
-	rows, err = db.Query(friendsCountQuery, user.ID)
+	friends := new(int)
+	err = db.QueryRow(friendsCountQuery, user.ID).Scan(friends)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
@@ -433,9 +434,6 @@ one = ?
 		friends = append(friends, Friend{key, val})
 	}
 	*/
-	friends := new(int)
-	checkErr(row.Scan(friends))
-	rows.Close();
 
 	rows, err = db.Query(`SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) AS updated
 FROM footprints
