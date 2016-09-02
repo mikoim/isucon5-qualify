@@ -53,11 +53,12 @@ type Entry struct {
 }
 
 type Comment struct {
-	ID        int
-	EntryID   int
-	UserID    int
-	Comment   string
-	CreatedAt time.Time
+	ID          int
+	EntryID     int
+	UserID      int
+	Comment     string
+	CreatedAt   time.Time
+	EntryUserID int
 }
 
 type Friend struct {
@@ -322,13 +323,22 @@ func GetIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
-	rows, err = db.Query(`
-SELECT c.id AS id, c.entry_id AS entry_id, c.user_id AS user_id, c.comment AS comment, c.created_at AS created_at
-FROM comments c
-JOIN entries e ON c.entry_id = e.id
-WHERE e.user_id = ?
+	commentsForMeQuery := `
+SELECT
+    c.id AS id,
+    c.entry_id AS entry_id,
+    c.user_id AS user_id,
+    c.comment AS comment,
+    c.created_at AS created_at
+FROM
+    comments c
+WHERE
+    c.entry_user_id = ?
 ORDER BY c.created_at DESC
-LIMIT 10`, user.ID)
+LIMIT 10
+	`
+
+	rows, err = db.Query(commentsForMeQuery, user.ID)
 	if err != sql.ErrNoRows {
 		checkErr(err)
 	}
@@ -577,7 +587,7 @@ func GetEntry(w http.ResponseWriter, r *http.Request) {
 	comments := make([]Comment, 0, 10)
 	for rows.Next() {
 		c := Comment{}
-		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt))
+		checkErr(rows.Scan(&c.ID, &c.EntryID, &c.UserID, &c.Comment, &c.CreatedAt, &c.EntryUserID))
 		comments = append(comments, c)
 	}
 	rows.Close()
@@ -638,7 +648,7 @@ func PostComment(w http.ResponseWriter, r *http.Request) {
 	}
 	user := getCurrentUser(w, r)
 
-	_, err = db.Exec(`INSERT INTO comments (entry_id, user_id, comment) VALUES (?,?,?)`, entry.ID, user.ID, r.FormValue("comment"))
+	_, err = db.Exec(`INSERT INTO comments (entry_id, user_id, comment, entry_user_id) VALUES (?,?,?,?)`, entry.ID, user.ID, r.FormValue("comment"), entry.UserID)
 	checkErr(err)
 	http.Redirect(w, r, "/diary/entry/" + strconv.Itoa(entry.ID), http.StatusSeeOther)
 }
@@ -788,7 +798,7 @@ func main() {
 	checkErr(err)
 
 	checkErr(os.Chmod("app.sock", 0777))
-	
+
 	defer s.Close()
 
 	go func() {
