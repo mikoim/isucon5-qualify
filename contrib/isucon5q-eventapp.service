@@ -1,0 +1,13 @@
+[Unit]
+Description=isucon5q-eventapp
+After=mysql.service
+Requires=mysql.service
+
+[Service]
+User=isucon
+Group=isucon
+WorkingDirectory=/home/isucon/isucon5-qualify/eventapp
+ExecStart=/usr/bin/bundle exec unicorn -c ./unicorn_config.rb
+
+[Install]
+WantedBy=multi-user.target

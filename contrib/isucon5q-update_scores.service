@@ -1,0 +1,13 @@
+[Unit]
+Description=isucon5q-update_scores
+After=mysql.service
+Requires=mysql.service
+
+[Service]
+User=isucon
+Group=isucon
+WorkingDirectory=/home/isucon/isucon5-qualify/eventapp
+ExecStart=/usr/bin/bundle exec ruby update_scores.rb
+
+[Install]
+WantedBy=multi-user.target

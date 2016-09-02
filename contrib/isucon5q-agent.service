@@ -1,0 +1,13 @@
+[Unit]
+Description=isucon5q-agent
+After=mysql.service
+Requires=mysql.service
+
+[Service]
+User=isucon
+Group=isucon
+WorkingDirectory=/home/isucon/isucon5-qualify/bench
+ExecStart=/usr/bin/bundle exec ruby agent.rb
+
+[Install]
+WantedBy=multi-user.target
