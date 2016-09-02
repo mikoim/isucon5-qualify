@@ -785,10 +785,10 @@ func main() {
 	r.HandleFunc("/", myHandler(GetIndex))
 
 	s, err := net.Listen("unix", "app.sock")
-	if err != nil {
-		panic(err)
-	}
+	checkErr(err)
 
+	checkErr(os.Chmod("app.sock", 0777))
+	
 	defer s.Close()
 
 	go func() {
