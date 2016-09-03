@@ -734,33 +734,18 @@ func GetInitialize(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	host := os.Getenv("ISUCON5_DB_HOST")
-	if host == "" {
-		host = "localhost"
+	dsn := os.Getenv("ISUCON5_DSN")
+	if dsn == "" {
+		dsn = "root:@unix(/var/run/mysqld/mysqld.sock)/isucon5q?loc=Local&parseTime=true"
 	}
-	portstr := os.Getenv("ISUCON5_DB_PORT")
-	if portstr == "" {
-		portstr = "3306"
-	}
-	port, err := strconv.Atoi(portstr)
-	if err != nil {
-		log.Fatalf("Failed to read DB port number from an environment variable ISUCON5_DB_PORT.\nError: %s", err.Error())
-	}
-	user := os.Getenv("ISUCON5_DB_USER")
-	if user == "" {
-		user = "root"
-	}
-	password := os.Getenv("ISUCON5_DB_PASSWORD")
-	dbname := os.Getenv("ISUCON5_DB_NAME")
-	if dbname == "" {
-		dbname = "isucon5q"
-	}
+
 	ssecret := os.Getenv("ISUCON5_SESSION_SECRET")
 	if ssecret == "" {
 		ssecret = "beermoris"
 	}
 
-	db, err = sql.Open("mysql", user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + dbname + "?loc=Local&parseTime=true")
+	var err error
+	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %s.", err.Error())
 	}
