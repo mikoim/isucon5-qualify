@@ -1,0 +1,13 @@
+[Unit]
+Description=isuxi-go
+After=syslog.target
+
+[Service]
+WorkingDirectory=/home/isucon/isucon5-qualify/webapp/go
+ExecStart=/home/isucon/isucon5-qualify/webapp/go/app
+Environment="GOMAXPROCS=16"
+Environment="GOGC=1000"
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
