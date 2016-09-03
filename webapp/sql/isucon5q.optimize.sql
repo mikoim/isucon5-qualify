@@ -28,10 +28,12 @@ CREATE TABLE `comments` (
   `user_id` int(11) NOT NULL,
   `comment` text,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `entry_user_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `entry_id` (`entry_id`),
-  KEY `created_at` (`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=1503492 DEFAULT CHARSET=utf8mb4;
+  KEY `created_at` (`created_at`),
+  KEY `index4` (`entry_user_id`,`created_at`)
+) ENGINE=InnoDB AUTO_INCREMENT=1541818 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
