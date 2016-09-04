@@ -6,6 +6,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/streamrail/concurrent-map"
 	"html/template"
 	"log"
 	"net/http"
@@ -78,6 +79,8 @@ var prefs = []string{"未入力",
 	"石川県", "福井県", "山梨県", "長野県", "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県", "鳥取県", "島根県",
 	"岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県"}
 
+var userCache = cmap.New()
+
 var (
 	ErrAuthentication = errors.New("Authentication error.")
 	ErrPermissionDenied = errors.New("Permission denied.")
@@ -116,6 +119,11 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) *User {
 	if !ok || userID == nil {
 		return nil
 	}
+	u, ok = userCache.Get(strconv.Itoa(userID.(int)))
+	if ok {
+		user := u.(User)
+		return &user
+	}
 	row := db.QueryRow(`SELECT id, account_name, nick_name, email FROM users WHERE id=?`, userID)
 	user := User{}
 	err := row.Scan(&user.ID, &user.AccountName, &user.NickName, &user.Email)
@@ -123,6 +131,7 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) *User {
 		checkErr(ErrAuthentication)
 	}
 	checkErr(err)
+	userCache.Set(strconv.Itoa(userID.(int)), user)
 	*r = *r.WithContext(context.WithValue(ctx, "user", user))
 	return &user
 }
@@ -137,6 +146,11 @@ func authenticated(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func getUser(w http.ResponseWriter, userID int) *User {
+	u, ok := userCache.Get(strconv.Itoa(userID))
+	if ok {
+		user := u.(User)
+		return &user
+	}
 	row := db.QueryRow(`SELECT * FROM users WHERE id = ?`, userID)
 	user := User{}
 	err := row.Scan(&user.ID, &user.AccountName, &user.NickName, &user.Email, new(string))
@@ -144,6 +158,7 @@ func getUser(w http.ResponseWriter, userID int) *User {
 		checkErr(ErrContentNotFound)
 	}
 	checkErr(err)
+	userCache.Set(strconv.Itoa(userID), user)
 	return &user
 }
 
