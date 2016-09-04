@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/go-sql-driver/mysql"
-	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"html/template"
@@ -19,6 +18,7 @@ import (
 	"net"
 	"os/signal"
 	"syscall"
+	"context"
 )
 
 var (
@@ -105,7 +105,8 @@ WHERE u.email = ? AND u.passhash = SHA2(CONCAT(?, s.salt), 512)`
 }
 
 func getCurrentUser(w http.ResponseWriter, r *http.Request) *User {
-	u := context.Get(r, "user")
+	ctx := r.Context()
+	u := ctx.Value("user")
 	if u != nil {
 		user := u.(User)
 		return &user
@@ -122,7 +123,7 @@ func getCurrentUser(w http.ResponseWriter, r *http.Request) *User {
 		checkErr(ErrAuthentication)
 	}
 	checkErr(err)
-	context.Set(r, "user", user)
+	*r = *r.WithContext(context.WithValue(ctx, "user", user))
 	return &user
 }
 
